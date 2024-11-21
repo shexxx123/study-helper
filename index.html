@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Helper</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+    textarea, input[type="file"] {
+      width: 100%;
+      margin-bottom: 20px;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .quiz {
+      margin-top: 20px;
+    }
+    .question {
+      margin-bottom: 15px;
+    }
+    .answers button {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Study Helper</h1>
+    <p>Carica un file di testo o scrivi manualmente:</p>
+    <input type="file" id="fileInput" accept=".txt">
+    <textarea id="textInput" placeholder="Oppure scrivi o incolla il tuo testo qui..."></textarea>
+    <button id="generateQuiz">Genera Quiz</button>
+    
+    <div class="quiz" id="quizContainer" style="display: none;">
+      <h2>Quiz</h2>
+      <div id="quizContent"></div>
+    </div>
+  </div>
+
+  <script>
+    // Leggi file di testo
+    document.getElementById('fileInput').addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          document.getElementById('textInput').value = e.target.result;
+        };
+        reader.readAsText(file);
+      }
+    });
+
+    // Generazione Quiz
+    document.getElementById('generateQuiz').addEventListener('click', () => {
+      const textInput = document.getElementById('textInput').value;
+      const quizContainer = document.getElementById('quizContainer');
+      const quizContent = document.getElementById('quizContent');
+
+      if (!textInput.trim()) {
+        alert('Inserisci un testo o carica un file!');
+        return;
+      }
+
+      // Generazione domande
+      const sentences = textInput.split('.').filter(sentence => sentence.trim());
+      quizContent.innerHTML = '';
+
+      sentences.forEach((sentence, index) => {
+        if (sentence.length > 10) {
+          const question = sentence.trim().split(' ')[0]; // Prima parola come domanda
+          const options = [
+            question,
+            'Risposta sbagliata 1',
+            'Risposta sbagliata 2',
+            'Risposta sbagliata 3'
+          ].sort(() => Math.random() - 0.5); // Mescola le risposte
+
+          const questionElement = document.createElement('div');
+          questionElement.classList.add('question');
+          questionElement.innerHTML = `
+            <p>${index + 1}. Qual è la prima parola di questa frase?</p>
+            <div class="answers">
+              ${options.map(option => `<button>${option}</button>`).join('')}
+            </div>
+          `;
+          quizContent.appendChild(questionElement);
+        }
+      });
+
+      quizContainer.style.display = 'block';
+
+      // Gestione risposte
+      document.querySelectorAll('.answers button').forEach(button => {
+        button.addEventListener('click', () => {
+          if (button.innerText === sentences[parseInt(button.closest('.question').innerText.split('.')[0]) - 1].trim().split(' ')[0]) {
+            button.style.backgroundColor = 'green';
+          } else {
+            button.style.backgroundColor = 'red';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
