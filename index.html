@@ -3,205 +3,165 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Study Helper Avanzato</title>
-  <!-- Aggiunta Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>Quiz e Flashcards Avanzati</title>
   <style>
     body {
-      background-color: #f8f9fa;
-      padding: 20px;
+      font-family: Arial, sans-serif;
+      margin: 20px;
     }
     .container {
-      background: #fff;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      max-width: 800px;
+      margin: 0 auto;
     }
-    .flashcard {
+    #quizContainer, #flashcardContainer {
       display: none;
-      text-align: center;
-      padding: 20px;
-      border: 2px solid #ddd;
-      border-radius: 8px;
       margin-top: 20px;
     }
-    .flashcard.active {
-      display: block;
-    }
-    .correct {
-      background-color: #28a745 !important;
-      color: white !important;
-    }
-    .wrong {
-      background-color: #dc3545 !important;
-      color: white !important;
-    }
-    #progress {
-      height: 10px;
-      background: #007bff;
-      margin-top: 10px;
+    .btn {
+      padding: 10px 15px;
+      margin: 5px;
+      cursor: pointer;
+      border: none;
       border-radius: 5px;
     }
+    .btn.success { background-color: #4caf50; color: white; }
+    .btn.danger { background-color: #f44336; color: white; }
+    .btn.info { background-color: #2196f3; color: white; }
+    .response-feedback {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .response-feedback.correct { color: #4caf50; }
+    .response-feedback.incorrect { color: #f44336; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1 class="text-center">Study Helper Avanzato</h1>
-    <p class="text-center">Carica un file di testo o PDF, oppure inserisci manualmente del testo per generare quiz o flashcards interattive!</p>
+    <h1>Quiz e Flashcards Avanzati</h1>
+    <textarea id="textInput" rows="5" placeholder="Inserisci del testo qui..."></textarea>
+    <br>
+    <button id="generateQuiz" class="btn info">Genera Quiz</button>
+    <button id="generateFlashcards" class="btn info">Genera Flashcards</button>
 
-    <div class="mb-3">
-      <label for="fileInput" class="form-label">Carica un file di testo o PDF:</label>
-      <input type="file" class="form-control" id="fileInput" accept=".txt, .pdf">
+    <!-- Contenitore Quiz -->
+    <div id="quizContainer">
+      <h2>Quiz</h2>
+      <p id="question"></p>
+      <div id="options"></div>
+      <p id="explanation" class="response-feedback"></p>
     </div>
 
-    <textarea id="textInput" class="form-control mb-3" rows="5" placeholder="Oppure scrivi o incolla il testo qui..."></textarea>
-    <div class="d-flex justify-content-between">
-      <button id="generateQuiz" class="btn btn-primary">Genera Quiz</button>
-      <button id="generateFlashcards" class="btn btn-secondary">Genera Flashcards</button>
-    </div>
-
-    <!-- Quiz Container -->
-    <div id="quizContainer" style="display: none;" class="mt-4">
-      <h2>Quiz Generato</h2>
-      <div id="quizContent"></div>
-      <div id="resultContainer" class="mt-3"></div>
-    </div>
-
-    <!-- Flashcards Container -->
-    <div id="flashcardContainer" style="display: none;" class="mt-4">
-      <h2>Modalità Flashcards</h2>
-      <div class="flashcard" id="flashcard"></div>
-      <div class="mt-3 text-center">
-        <button id="remembered" class="btn btn-success me-3">Ricordato</button>
-        <button id="notRemembered" class="btn btn-danger">Non Ricordato</button>
-      </div>
-      <div id="progressContainer" class="mt-3">
-        <p>Progresso:</p>
-        <div id="progressBar" style="width: 0%;" id="progress"></div>
-      </div>
+    <!-- Contenitore Flashcards -->
+    <div id="flashcardContainer">
+      <h2>Flashcard</h2>
+      <p id="flashcard"></p>
+      <button id="remembered" class="btn success">Ricordata</button>
+      <button id="notRemembered" class="btn danger">Non Ricordata</button>
     </div>
   </div>
 
-  <!-- Aggiunta PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.17.263/pdf.min.js"></script>
-
   <script>
-let currentFlashcardIndex = 0;
-let flashcards = [];
+    let currentFlashcardIndex = 0;
+    let flashcards = [];
+    let questions = [];
 
-// Funzione per estrarre domande
-function generateQuestions(text) {
-  const sentences = text.match(/[^.!?]+[.!?]/g); // Estrai frasi con punteggiatura
-  if (!sentences) {
-    alert("Testo non valido. Assicurati che sia formattato correttamente.");
-    return [];
-  }
-  return sentences.map((sentence, index) => ({
-    question: `Qual è il significato di: "${sentence.trim()}"?`,
-    correctAnswer: "Risposta esempio", // Qui puoi aggiungere logiche più avanzate.
-    id: index,
-  }));
-}
-
-// Caricamento file
-document.getElementById('fileInput').addEventListener('change', async (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    if (file.type === "application/pdf") {
-      const typedarray = new Uint8Array(await file.arrayBuffer());
-      const pdf = await pdfjsLib.getDocument(typedarray).promise;
-      let text = "";
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map(item => item.str).join(" ");
-      }
-      document.getElementById('textInput').value = text.trim();
-    } else {
-      reader.onload = (e) => {
-        document.getElementById('textInput').value = e.target.result;
-      };
-      reader.readAsText(file);
+    // Estrae domande e risposte casuali dal testo
+    function generateQuestionsAndAnswers(text) {
+      const sentences = text.split('.').filter(s => s.trim() !== '');
+      return sentences.map((sentence, index) => {
+        const options = [...sentences]; // Usa tutte le frasi come opzioni
+        const correctAnswer = sentence.trim();
+        options.splice(index, 1); // Rimuovi la risposta corretta
+        const shuffledOptions = [correctAnswer, ...options.slice(0, 3)].sort(() => Math.random() - 0.5);
+        return {
+          question: `Cosa significa: "${sentence.trim()}"?`,
+          correctAnswer,
+          options: shuffledOptions,
+          explanation: `La risposta corretta era: "${correctAnswer}"`,
+        };
+      });
     }
-  }
-});
 
-// Genera quiz
-document.getElementById('generateQuiz').addEventListener('click', () => {
-  const textInput = document.getElementById('textInput').value.trim();
-  if (!textInput) {
-    alert("Inserisci un testo o carica un file!");
-    return;
-  }
+    // Genera quiz
+    document.getElementById('generateQuiz').addEventListener('click', () => {
+      const textInput = document.getElementById('textInput').value.trim();
+      if (!textInput) {
+        alert("Inserisci del testo!");
+        return;
+      }
 
-  const questions = generateQuestions(textInput);
-  if (questions.length === 0) {
-    alert("Non sono state trovate frasi per il quiz!");
-    return;
-  }
+      questions = generateQuestionsAndAnswers(textInput);
+      const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+      showQuestion(randomQuestion);
+    });
 
-  const quizContainer = document.getElementById('quizContainer');
-  const quizContent = document.getElementById('quizContent');
-  quizContent.innerHTML = "";
+    // Mostra domanda
+    function showQuestion(question) {
+      document.getElementById('question').textContent = question.question;
+      const optionsContainer = document.getElementById('options');
+      optionsContainer.innerHTML = '';
+      document.getElementById('explanation').textContent = '';
 
-  questions.forEach((q, index) => {
-    const questionElem = document.createElement('div');
-    questionElem.classList.add('mb-3');
-    questionElem.innerHTML = `
-      <p><strong>${index + 1}. ${q.question}</strong></p>
-      <button class="btn btn-success btn-sm correct">Corretto</button>
-      <button class="btn btn-danger btn-sm wrong">Sbagliato</button>
-    `;
-    quizContent.appendChild(questionElem);
-  });
+      question.options.forEach(option => {
+        const button = document.createElement('button');
+        button.textContent = option;
+        button.classList.add('btn', 'info');
+        button.addEventListener('click', () => {
+          if (option === question.correctAnswer) {
+            button.classList.add('success');
+            document.getElementById('explanation').textContent = question.explanation;
+            document.getElementById('explanation').classList.add('correct');
+          } else {
+            button.classList.add('danger');
+            document.getElementById('explanation').textContent = question.explanation;
+            document.getElementById('explanation').classList.add('incorrect');
+          }
+        });
+        optionsContainer.appendChild(button);
+      });
 
-  quizContainer.style.display = "block";
-  document.getElementById('flashcardContainer').style.display = "none";
-});
+      document.getElementById('quizContainer').style.display = 'block';
+      document.getElementById('flashcardContainer').style.display = 'none';
+    }
 
-// Genera flashcards
-document.getElementById('generateFlashcards').addEventListener('click', () => {
-  const textInput = document.getElementById('textInput').value.trim();
-  if (!textInput) {
-    alert("Inserisci un testo o carica un file!");
-    return;
-  }
+    // Genera flashcards
+    document.getElementById('generateFlashcards').addEventListener('click', () => {
+      const textInput = document.getElementById('textInput').value.trim();
+      if (!textInput) {
+        alert("Inserisci del testo!");
+        return;
+      }
 
-  flashcards = textInput.split('.').filter(sentence => sentence.trim());
-  if (flashcards.length === 0) {
-    alert("Non sono state trovate frasi per le flashcards!");
-    return;
-  }
+      flashcards = textInput.split('.').filter(s => s.trim() !== '');
+      if (flashcards.length === 0) {
+        alert("Nessuna frase trovata per le flashcards!");
+        return;
+      }
 
-  currentFlashcardIndex = 0;
-  updateFlashcard();
+      currentFlashcardIndex = 0;
+      updateFlashcard();
+      document.getElementById('flashcardContainer').style.display = 'block';
+      document.getElementById('quizContainer').style.display = 'none';
+    });
 
-  document.getElementById('flashcardContainer').style.display = "block";
-  document.getElementById('quizContainer').style.display = "none";
-});
+    // Mostra flashcard corrente
+    function updateFlashcard() {
+      if (currentFlashcardIndex >= flashcards.length) {
+        alert("Hai completato tutte le flashcards!");
+        return;
+      }
+      document.getElementById('flashcard').textContent = flashcards[currentFlashcardIndex];
+    }
 
-// Mostra flashcard corrente
-function updateFlashcard() {
-  if (currentFlashcardIndex >= flashcards.length) {
-    alert("Hai completato tutte le flashcards!");
-    return;
-  }
-
-  const flashcardElement = document.getElementById('flashcard');
-  flashcardElement.textContent = flashcards[currentFlashcardIndex];
-}
-
-// Avanza flashcard
-document.getElementById('remembered').addEventListener('click', () => {
-  currentFlashcardIndex++;
-  updateFlashcard();
-});
-
-document.getElementById('notRemembered').addEventListener('click', () => {
-  currentFlashcardIndex++;
-  updateFlashcard();
-});
+    // Gestione flashcards
+    document.getElementById('remembered').addEventListener('click', () => {
+      currentFlashcardIndex++;
+      updateFlashcard();
+    });
+    document.getElementById('notRemembered').addEventListener('click', () => {
+      currentFlashcardIndex++;
+      updateFlashcard();
+    });
   </script>
 </body>
 </html>
